@@ -1,10 +1,12 @@
 import os
 import jwt
+import sys
 import logging
 import chardet
 import argparse
 import multiprocessing
 from termcolor import colored
+from ArgumentParserClass import MyArgumentParser
 
 
 class Author(object):
@@ -24,34 +26,27 @@ class JWTcrack(object):
 
     def __init__(self, token, filename,
                  workers=1, encode=None):
+        """
+        Simple class constructor
+        :param token: JSON web token.
+        :param filename: parsed filename. No default value
+        :param workers: Amount of processes. Default: 1.
+        :param encode: File encoding.
+        """
         self.token = token
         self.filename = filename
         self.workers = workers
         self.encode = encode
 
-    def get_arguments(self):
-        parser = argparse.ArgumentParser(
-            usage="JWTcrack.py [-f] [--workers] [-JWT"
-        )
-        parser.add_argument('-f',
-                            action='store',
-                            help='Filename. No default value'
-                            )
-        parser.add_argument('--workers',
-                            default=1,
-                            action='store',
-                            help='Amount of workers. Default is 1'
-                            )
-        parser.add_argument('JWT',
-                            type=str,
-                            metavar='JWT',
-                            action='store',
-                            help='Encoded Json Web Token. No default value')
-
-        args = parser.parse_args(['-f', '123', '13212'])
-        self.filename, self.workers, self.token = vars(args).values()
-
     def file_encoding(self):
+        """
+        Opening file for read bytes.
+        Bytes -> chardet to detect encoding.
+        If confidence >= 0.55:
+        :return result
+        else:
+        TODO
+        """
         with open(self.filename, 'rb') as file:
             data = file.read(JWTcrack.CHUNK)
             res = chardet.detect(data)
@@ -60,6 +55,14 @@ class JWTcrack(object):
             self.encode = str(res['encoding'])
 
     def open_file(self):
+        """
+        Method for file opening.
+        If file in current directory:
+        need to check its encoding.
+        TODO Else:
+        TODO through exception
+        :return:
+        """
         if self.filename in os.listdir():
             self.file_encoding()
         if self.encode is not None:
@@ -70,6 +73,14 @@ class JWTcrack(object):
                 yield keys
 
     def brute_jwt(self, key):
+        """
+        Inserting random keys from filename,
+        splited by newline.
+        Trying to decode JWT token.
+        TODO return decoded data
+        :param key:
+        :return:
+        """
         try:
             decoded_data = jwt.decode(self.token, key=key, algorithms=['HS256'])
         except jwt.exceptions.InvalidSignatureError:
@@ -78,6 +89,11 @@ class JWTcrack(object):
             print(decoded_data)
 
     def start_cracking(self):
+        """
+        Main method.
+        TODO catch exceptions
+        :return:
+        """
         data = self.open_file()
         try:
             while (True):
@@ -87,14 +103,15 @@ class JWTcrack(object):
             pass
 
 
-class ProgressBar(object):
-    def change_progress(self, iter, max_len):
-        print()
-
-
 author = Author()
 print(author.__repr__())
-a = JWTcrack(
-    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjoiYWRtaW4xMjMiLCJsb2dpbiI6ImFkbWluIn0._uBdbB9V7c8bXNbmdp5ffy2BN1ElDZfne6DP26ACbeA',
-    'test.txt')
-a.start_cracking()
+# testing -------
+my_parser = MyArgumentParser()
+my_parser.add_arguments()
+args = my_parser.parse_args()
+# check for an error
+if my_parser.error_message:
+    print(my_parser.error_message)
+print(args)
+tk = JWTcrack(filename=args.f, token=args.v)
+tk.start_cracking()
