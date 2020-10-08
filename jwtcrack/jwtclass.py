@@ -3,10 +3,10 @@ import jwt
 import sys
 import logging
 import chardet
-import argparse
 import multiprocessing
 from termcolor import colored
 from ArgumentParserClass import MyArgumentParser
+from ProgressBarClass import ProgressBar
 
 
 class Author(object):
@@ -44,8 +44,6 @@ class JWTcrack(object):
         Bytes -> chardet to detect encoding.
         If confidence >= 0.55:
         :return result
-        else:
-        TODO
         """
         with open(self.filename, 'rb') as file:
             data = file.read(JWTcrack.CHUNK)
@@ -53,18 +51,24 @@ class JWTcrack(object):
             file.close()
         if float(res['confidence']) >= 0.55:
             self.encode = str(res['encoding'])
+            print(colored(f'\r[+] Found file encoding: {self.encode}', 'green'))
+        else:
+            logging.critical(colored("\r[-] Can't spot file encoding", 'red'))
+            quit()
 
     def open_file(self):
         """
         Method for file opening.
         If file in current directory:
         need to check its encoding.
-        TODO Else:
         TODO through exception
         :return:
         """
         if self.filename in os.listdir():
             self.file_encoding()
+        else:
+            logging.error(colored(f"\r[-] No file found: {self.filename}", 'red'))
+            quit()
         if self.encode is not None:
             with open(self.filename, 'r', encoding=self.encode) as decoded_data:
                 data = decoded_data.read()
@@ -77,41 +81,47 @@ class JWTcrack(object):
         Inserting random keys from filename,
         splited by newline.
         Trying to decode JWT token.
-        TODO return decoded data
         :param key:
-        :return:
+        :return: decoded_data
         """
         try:
             decoded_data = jwt.decode(self.token, key=key, algorithms=['HS256'])
         except jwt.exceptions.InvalidSignatureError:
             pass
         else:
-            print(decoded_data)
+            return decoded_data
 
     def start_cracking(self):
         """
         Main method.
-        TODO catch exceptions
         :return:
         """
         data = self.open_file()
+        bar = ProgressBar()
         try:
-            while (True):
+            while True:
+                bar.output()
                 temp = str(next(data))
-                self.brute_jwt(temp)
-        except Exception as err:
-            pass
+                decoded = self.brute_jwt(temp)
+                if decoded:
+                    return colored(f"\n[+] {str(decoded)} with key: {temp}", 'green')
+        except Exception:
+            logging.warning(colored('\r[-] Nothing found. Try another dictionary', 'yellow'))
 
 
 author = Author()
 print(author.__repr__())
-# testing -------
+
 my_parser = MyArgumentParser()
 my_parser.add_arguments()
 args = my_parser.parse_args()
-# check for an error
+
 if my_parser.error_message:
-    print(my_parser.error_message)
-print(args)
+    my_parser.print_help()
+    quit()
+
 tk = JWTcrack(filename=args.f, token=args.v)
-tk.start_cracking()
+decode = tk.start_cracking()
+if decode is not None:
+    print(str(decode))
+

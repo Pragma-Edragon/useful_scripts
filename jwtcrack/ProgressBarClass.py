@@ -1,3 +1,11 @@
+import time
+
+
 class ProgressBar(object):
-    def change_progress(self, iter, max_len):
-        print()
+    start = time.time()
+
+    def output(self):
+        getcurtime = round(float(time.time()) - float(ProgressBar.start), 1)
+        print(
+            f"\r[+] Time elapsed: {getcurtime}s", end=''
+        )
